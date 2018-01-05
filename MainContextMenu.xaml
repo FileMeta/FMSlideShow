@@ -1,0 +1,72 @@
+﻿<!-- This context menu window is a kludge. I should use ContextMenu. However, that requires deploying
+    command routing and such. This is a convenient shortcut. -->
+<Window x:Class="SlideDiscWPF.MainContextMenu"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:i="clr-namespace:System.Windows.Input;assembly=PresentationCore"
+        xmlns:l="clr-namespace:SlideDiscWPF"
+        Title="MainContextMenu" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" ScrollViewer.VerticalScrollBarVisibility="Disabled" SizeToContent="WidthAndHeight" WindowStyle="None" FontSize="22">
+    <ListBox Name="fListBox" SelectionChanged="fListBox_SelectionChanged">
+        <ListBoxItem FontWeight="ExtraBold">Help (H)</ListBoxItem>
+        <ListBoxItem>
+            <ListBoxItem.Resources>
+                <l:CommandKey x:Key="Cmd" KbKey="6"/>
+            </ListBoxItem.Resources>
+            Select Sides (Enter)
+        </ListBoxItem>
+        <ListBoxItem>
+            <ListBoxItem.Resources>
+                <l:CommandKey x:Key="Cmd" KbKey="25"/>
+            </ListBoxItem.Resources>
+            Next (&#x2192;)
+        </ListBoxItem>
+        <ListBoxItem>
+            <ListBoxItem.Resources>
+                <l:CommandKey x:Key="Cmd" KbKey="23"/>
+            </ListBoxItem.Resources>
+            Prev (&#x2190;)
+        </ListBoxItem>
+        <ListBoxItem>
+            <ListBoxItem.Resources>
+                <l:CommandKey x:Key="Cmd" KbKey="59"/>
+            </ListBoxItem.Resources>
+            Pause (P or Spacebar)
+        </ListBoxItem>
+        <ListBoxItem>
+            <ListBoxItem.Resources>
+                <l:CommandKey x:Key="Cmd" KbKey="56"/>
+            </ListBoxItem.Resources>
+            Mute (M)
+        </ListBoxItem>
+        <ListBoxItem>
+            <ListBoxItem.Resources>
+                <l:CommandKey x:Key="Cmd" KbKey="63"/>
+            </ListBoxItem.Resources>
+            Truncate Video (T)
+        </ListBoxItem>
+        <ListBoxItem>
+            <ListBoxItem.Resources>
+                <l:CommandKey x:Key="Cmd" KbKey="49"/>
+            </ListBoxItem.Resources>
+            Tag Favorite (F)
+        </ListBoxItem>
+        <ListBoxItem>
+            <ListBoxItem.Resources>
+                <l:CommandKey x:Key="Cmd" KbKey="62"/>
+            </ListBoxItem.Resources>
+            Tag ToShare (S)
+        </ListBoxItem>
+        <ListBoxItem>
+            <ListBoxItem.Resources>
+                <l:CommandKey x:Key="Cmd" KbKey="57"/>
+            </ListBoxItem.Resources>
+            Tag NeedsWork (N)
+        </ListBoxItem>
+        <ListBoxItem>
+            <ListBoxItem.Resources>
+                <l:CommandKey x:Key="Cmd" KbKey="13"/>
+            </ListBoxItem.Resources>
+            Exit (Esc)
+        </ListBoxItem>
+    </ListBox>
+</Window>

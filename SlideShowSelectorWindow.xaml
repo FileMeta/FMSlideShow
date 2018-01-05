@@ -1,0 +1,15 @@
+﻿<Window x:Class="SlideDiscWPF.SlideShowSelectorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:l="clr-namespace:SlideDiscWPF"
+        Title="SlideShowSelectorWindow" Height="500" Width="900" WindowStartupLocation="Manual" Left="0" Top="0"  FontSize="20" ShowInTaskbar="False" WindowStyle="None" ResizeMode="CanResizeWithGrip" SnapsToDevicePixels="True">
+    <DockPanel>
+        <DockPanel DockPanel.Dock="Top" Background="AliceBlue">
+            <Button Name="fExit" DockPanel.Dock="Right" FontSize="10" Width="40" Background="DarkRed" Foreground="White" Click="fExit_Click" IsTabStop="False" >X</Button>
+            <Button Name="fOk" DockPanel.Dock="Right" FontSize="10" Width="40" Background="DarkGreen" Foreground="White" Click="fOk_Click" IsTabStop="False" >OK</Button>
+            <TextBlock Name="fHeader" DockPanel.Dock ="Right" FontSize="10" MouseDown="fHeader_MouseDown"></TextBlock>
+        </DockPanel>
+        <l:FolderTreeView x:Name="fFolderView" DockPanel.Dock="Bottom" BorderThickness="0">
+        </l:FolderTreeView>
+    </DockPanel>
+</Window>
