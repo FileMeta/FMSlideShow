@@ -51,6 +51,15 @@ namespace SlideDiscWPF
 
 	abstract class SlidePanel : Grid
 	{
+
+        #region Static Elements
+
+        // Property keys retrieved from https://msdn.microsoft.com/en-us/library/windows/desktop/dd561977(v=vs.85).aspx
+        static WinShell.PROPERTYKEY s_pkTitle = new WinShell.PROPERTYKEY("F29F85E0-4FF9-1068-AB91-08002B27B3D9", 2); // System.Title
+        static WinShell.PROPERTYKEY s_pkKeywords = new WinShell.PROPERTYKEY("F29F85E0-4FF9-1068-AB91-08002B27B3D9", 5); // System.Keywords
+        static WinShell.PROPERTYKEY s_pkDateTaken = new WinShell.PROPERTYKEY("14B81DA1-0135-4D31-96D9-6CBFC9671A99", 36867); // System.Photo.DateTaken (used on .jpg)
+        static WinShell.PROPERTYKEY s_pkDateEncoded = new WinShell.PROPERTYKEY("2E4B640D-5019-46D8-8881-55414CC5CAA0", 100); // System.Media.DateEncoded (used on .mp4)
+
         protected const double cMetadataFontSize = 20;
         protected static readonly Brush cMetadataColor = Brushes.Chartreuse;
         protected const double cTagsFontSize = 28;
@@ -110,14 +119,81 @@ namespace SlideDiscWPF
 
 		}
 
-		protected DateTime fDateTaken = DateTime.MinValue;
+        #endregion Static Elements
+
+        protected DateTime fDateTaken = DateTime.MinValue;
 		protected Uri fUri;
 		private PanelState fPanelState = PanelState.Init;
         private List<string> fTags;
         private bool fTagsChanged = false;
         private TextBlock fFlagsBlock;
 
-		public PanelState PanelState
+        public SlidePanel(Uri uri)
+        {
+            fUri = uri;
+
+            // Queue up the metadata load and the content load operations
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, new EmptyDelegate(LoadMetadata));
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, new EmptyDelegate(LoadContent));
+        }
+
+        protected virtual void LoadMetadata()
+        {
+            if (fUri == null) return;
+
+            try
+            {
+                using (var ps = WinShell.PropertyStore.Open(fUri.LocalPath, false))
+                {
+
+                    // Get the date the photo or video was taken.
+                    {
+                        object dt = ps.GetValue(s_pkDateTaken);
+                        if (dt == null)
+                        {
+                            dt = ps.GetValue(s_pkDateEncoded);
+                        }
+                        if (dt != null && dt is DateTime)
+                        {
+                            fDateTaken = ((DateTime)dt).ToLocalTime();
+                        }
+                    }
+
+                    var tags = new List<string>();
+
+                    // Get title
+                    string title = ps.GetValue(s_pkTitle) as string;
+                    if (!string.IsNullOrEmpty(title))
+                    {
+                        tags.Add(title);
+                    }
+
+                    // Get keywords
+                    var keywords = ps.GetValue(s_pkKeywords) as IEnumerable<string>;
+                    if (keywords != null)
+                    {
+                        tags.AddRange(keywords);
+                    }
+
+                    if (tags.Count > 0)
+                    {
+                        Tags = tags;
+                    }
+
+                }
+            }
+            catch (Exception err)
+            {
+                Debug.WriteLine(err.ToString());
+            }
+        }
+
+        protected virtual void LoadContent()
+        {
+            Debug.WriteLine("Default SlidePanel.LoadContent (not overrided)");
+        }
+
+        public PanelState PanelState
 		{
 			get { return fPanelState; }
 		}
@@ -185,11 +261,6 @@ namespace SlideDiscWPF
             get { return sZeroDuration; }
         }
 
-		public SlidePanel(Uri uri)
-		{
-			fUri = uri;
-		}
-
 		public virtual void Play()
 		{
 			// Default is to set state to still.
@@ -256,7 +327,7 @@ namespace SlideDiscWPF
 			if (fDateTaken != DateTime.MinValue)
 			{
 				builder.Append("\r\n");
-				builder.Append(fDateTaken.ToString("ddd, d MMM yy, h:mm tt"));
+				builder.Append(fDateTaken.ToString("ddd, d MMM yyyy, h:mm tt"));
 			}
 
 			if (builder.Length > 0)
@@ -347,15 +418,10 @@ namespace SlideDiscWPF
 			: base(bitmapUri)
 		{
 			Background = Brushes.Black;
-
-			// We queue this up on the dispatcher to let
-			// the rest of the initialization finish first.
-			// E.g. the control is added to it's parent.
-			Dispatcher.BeginInvoke(DispatcherPriority.Input, new EmptyDelegate(StartBackgroundLoad));
 		}
 
-		private void StartBackgroundLoad()
-		{
+        protected override void LoadContent()
+        {
             // Get scaling factor (must happen on the foreground thread)
             if (!s_hasSf)
             {
@@ -403,38 +469,6 @@ namespace SlideDiscWPF
                 image.EndInit();
                 image.Freeze();
                 fBitmap = image;
-
-                // TODO: Add Metadata
-
-                /*
-				// Decode the bitmap (this is where most of the time goes)
-				BitmapDecoder decoder = BitmapDecoder.Create(fUri, BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.OnLoad, sCachePolicy);
-
-				if (decoder.Frames.Count > 0)
-				{
-					fBitmap = decoder.Frames[0];
-					fBitmap.Freeze();
-
-					BitmapMetadata metadata = fBitmap.Metadata as BitmapMetadata;
-					if (metadata != null)
-					{
-						string dateTaken = metadata.DateTaken;
-						if (dateTaken != null)
-						{
-							fDateTaken = DateTime.Parse(metadata.DateTaken, CultureInfo.InvariantCulture,
-								DateTimeStyles.AssumeLocal | DateTimeStyles.AllowWhiteSpaces | DateTimeStyles.NoCurrentDateDefault);
-						}
-
-                        var keywords = metadata.Keywords;
-                        if (keywords != null && keywords.Count != 0)
-                        {
-                            Tags = keywords;
-                        }
-					}
-				}
-                */
-
-
 			}
 			catch (Exception err)
 			{
@@ -600,11 +634,11 @@ namespace SlideDiscWPF
 		public VideoPanel(Uri videoUri)
 			: base(videoUri)
 		{
-			Dispatcher.BeginInvoke(DispatcherPriority.Input, new EmptyDelegate(LoadVideo));
-		}
+            Background = Brushes.Black;
+        }
 
-		void LoadVideo()
-		{
+        protected override void LoadContent()
+        {
 			fMedia = new MediaElement();
 			fMedia.BeginInit();
 			fMedia.LoadedBehavior = MediaState.Manual;
@@ -618,7 +652,6 @@ namespace SlideDiscWPF
 			fMedia.MediaEnded +=new RoutedEventHandler(fMedia_MediaEnded);
 			fMedia.EndInit();
 
-			Background = Brushes.Black;
 			Children.Add(fMedia);
 			AddMetadata();
 		}
