@@ -553,9 +553,10 @@ namespace SlideDiscWPF
 
 			// Remove the prepped next panel
 			Children.Remove(fNextPanel);
+            fNextPanel.Done();    // Notify next panel that it is no longer in use.
 
-			// Reverse-rotate the panels
-			fNextPanel = fActivePanel;
+            // Reverse-rotate the panels
+            fNextPanel = fActivePanel;
 			fActivePanel = fFormerPanel;
 			fFormerPanel = null;
 

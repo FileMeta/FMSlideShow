@@ -127,6 +127,7 @@ namespace SlideDiscWPF
         private PanelState m_panelState = PanelState.Init;
         private TextBlock m_flagsBlock;
         protected DateTime m_dateTaken = DateTime.MinValue;
+        private string m_title;
         private List<string> m_tags;
         private bool m_tagsChanged = false;
 
@@ -197,8 +198,24 @@ namespace SlideDiscWPF
             Debug.WriteLine("Default SlidePanel.LoadContent (not overrided)");
         }
 
-        private void BackgroundSaveMetadata()
+        protected virtual void BackgroundSaveMetadata()
         {
+            Debug.Assert(m_tagsChanged);
+            if (m_uri == null) return;
+
+            try
+            {
+                using (var ps = WinShell.PropertyStore.Open(m_uri.LocalPath, true))
+                {
+                    string[] keywords = (m_tags != null) ? m_tags.ToArray() : new string[0];
+                    ps.SetValue(s_pkKeywords, keywords);
+                    ps.Commit();
+                }
+            }
+            catch (Exception err)
+            {
+                Debug.WriteLine(err.ToString());
+            }
         }
 
         public PanelState PanelState
@@ -231,6 +248,12 @@ namespace SlideDiscWPF
 			get { return true; }
 			set { }
 		}
+
+        protected string Title
+        {
+            get { return m_title; }
+            set { m_title = value; }
+        }
 
         protected IEnumerable<string> Tags
         {
@@ -298,7 +321,7 @@ namespace SlideDiscWPF
             // Save any tags on the background thread
             if (m_tagsChanged)
             {
-                // sDecoderDispatcher.BeginInvoke(DispatcherPriority.Background, new EmptyDelegate(BackgroundSaveMetadata));
+                sDecoderDispatcher.BeginInvoke(DispatcherPriority.Background, new EmptyDelegate(BackgroundSaveMetadata));
             }
         }
 
@@ -364,11 +387,17 @@ namespace SlideDiscWPF
                 m_flagsBlock = null;
             }
 
-			if (m_tags != null && m_tags.Count > 0)
+            string flagsText = m_title ?? string.Empty;
+            if (m_tags != null && m_tags.Count > 0)
+            {
+                flagsText = string.Concat(flagsText, "\r\n", string.Join("\r\n", m_tags));
+            }
+
+            if (!string.IsNullOrEmpty(flagsText))
 			{
 				m_flagsBlock = new TextBlock();
                 m_flagsBlock.BeginInit();
-                m_flagsBlock.Text = string.Join("\r\n", m_tags);
+                m_flagsBlock.Text = flagsText;
                 m_flagsBlock.FontSize = cTagsFontSize;
                 m_flagsBlock.Foreground = cTagsColor;
                 m_flagsBlock.FontWeight = FontWeights.Bold;
