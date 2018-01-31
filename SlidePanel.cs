@@ -121,29 +121,33 @@ namespace SlideDiscWPF
 
         #endregion Static Elements
 
-        protected DateTime fDateTaken = DateTime.MinValue;
-		protected Uri fUri;
-		private PanelState fPanelState = PanelState.Init;
-        private List<string> fTags;
-        private bool fTagsChanged = false;
-        private TextBlock fFlagsBlock;
+        #region Member Variables and Constructor
+
+        protected Uri m_uri;
+        private PanelState m_panelState = PanelState.Init;
+        private TextBlock m_flagsBlock;
+        protected DateTime m_dateTaken = DateTime.MinValue;
+        private List<string> m_tags;
+        private bool m_tagsChanged = false;
 
         public SlidePanel(Uri uri)
         {
-            fUri = uri;
+            m_uri = uri;
 
             // Queue up the metadata load and the content load operations
             Dispatcher.BeginInvoke(DispatcherPriority.Input, new EmptyDelegate(LoadMetadata));
             Dispatcher.BeginInvoke(DispatcherPriority.Input, new EmptyDelegate(LoadContent));
         }
 
+        #endregion Member Variables and Constructor
+
         protected virtual void LoadMetadata()
         {
-            if (fUri == null) return;
+            if (m_uri == null) return;
 
             try
             {
-                using (var ps = WinShell.PropertyStore.Open(fUri.LocalPath, false))
+                using (var ps = WinShell.PropertyStore.Open(m_uri.LocalPath, false))
                 {
 
                     // Get the date the photo or video was taken.
@@ -155,7 +159,7 @@ namespace SlideDiscWPF
                         }
                         if (dt != null && dt is DateTime)
                         {
-                            fDateTaken = ((DateTime)dt).ToLocalTime();
+                            m_dateTaken = ((DateTime)dt).ToLocalTime();
                         }
                     }
 
@@ -193,19 +197,23 @@ namespace SlideDiscWPF
             Debug.WriteLine("Default SlidePanel.LoadContent (not overrided)");
         }
 
+        private void BackgroundSaveMetadata()
+        {
+        }
+
         public PanelState PanelState
 		{
-			get { return fPanelState; }
+			get { return m_panelState; }
 		}
 
 		protected void SetPanelState(PanelState newState)
 		{
-			if (fPanelState == newState)
+			if (m_panelState == newState)
 			{
 				return;
 			}
-			PanelState oldState = fPanelState;
-			fPanelState = newState;
+			PanelState oldState = m_panelState;
+			m_panelState = newState;
 			SlideShow slideShow = Parent as SlideShow;
 			if (slideShow != null)
 			{
@@ -228,26 +236,26 @@ namespace SlideDiscWPF
         {
             get
             {
-                return fTags;
+                return m_tags;
             }
             set
             {
-                fTags = new List<string>(value);
-                fTagsChanged = false;
+                m_tags = new List<string>(value);
+                m_tagsChanged = false;
             }
         }
 
         public void ToggleTag(string tag)
         {
-            if (fTags == null)
+            if (m_tags == null)
             {
-                fTags = new List<string>();
+                m_tags = new List<string>();
             }
-            if (!fTags.Remove(tag))
+            if (!m_tags.Remove(tag))
             {
-                fTags.Add(tag);
+                m_tags.Add(tag);
             }
-            fTagsChanged = true;
+            m_tagsChanged = true;
             UpdateTagDisplay();
         }
 
@@ -283,27 +291,29 @@ namespace SlideDiscWPF
 		{
             // Default is to set state to ready
             SetPanelState(PanelState.Ready);
+		}
 
-            // Save any tags
-            if (fTagsChanged)
+        public virtual void Done()
+        {
+            // Save any tags on the background thread
+            if (m_tagsChanged)
             {
-                SaveTags();
-                fTagsChanged = false;
+                // sDecoderDispatcher.BeginInvoke(DispatcherPriority.Background, new EmptyDelegate(BackgroundSaveMetadata));
             }
-		}
+        }
 
-		public Uri Uri
-		{
-			get { return fUri; }
-		}
+        public Uri Uri
+        {
+            get { return m_uri; }
+        }
 
 		protected void AddMetadata()
 		{
 			StringBuilder builder = new StringBuilder();
 
-			if (fUri != null)
+			if (m_uri != null)
 			{
-				string path = fUri.OriginalString;
+				string path = m_uri.OriginalString;
 
 				SlideShow slideShow = Parent as SlideShow;
 				if (slideShow != null)
@@ -324,10 +334,10 @@ namespace SlideDiscWPF
 				}
 			}
 
-			if (fDateTaken != DateTime.MinValue)
+			if (m_dateTaken != DateTime.MinValue)
 			{
 				builder.Append("\r\n");
-				builder.Append(fDateTaken.ToString("ddd, d MMM yyyy, h:mm tt"));
+				builder.Append(m_dateTaken.ToString("ddd, d MMM yyyy, h:mm tt"));
 			}
 
 			if (builder.Length > 0)
@@ -348,24 +358,24 @@ namespace SlideDiscWPF
 
 		protected void UpdateTagDisplay()
 		{
-			if (fFlagsBlock != null)
+			if (m_flagsBlock != null)
             {
-                Children.Remove(fFlagsBlock);
-                fFlagsBlock = null;
+                Children.Remove(m_flagsBlock);
+                m_flagsBlock = null;
             }
 
-			if (fTags != null && fTags.Count > 0)
+			if (m_tags != null && m_tags.Count > 0)
 			{
-				fFlagsBlock = new TextBlock();
-                fFlagsBlock.BeginInit();
-                fFlagsBlock.Text = string.Join("\r\n", fTags);
-                fFlagsBlock.FontSize = cTagsFontSize;
-                fFlagsBlock.Foreground = cTagsColor;
-                fFlagsBlock.FontWeight = FontWeights.Bold;
-                fFlagsBlock.HorizontalAlignment = HorizontalAlignment.Right;
-                fFlagsBlock.VerticalAlignment = VerticalAlignment.Top;
-                fFlagsBlock.EndInit();
-                Children.Add(fFlagsBlock);
+				m_flagsBlock = new TextBlock();
+                m_flagsBlock.BeginInit();
+                m_flagsBlock.Text = string.Join("\r\n", m_tags);
+                m_flagsBlock.FontSize = cTagsFontSize;
+                m_flagsBlock.Foreground = cTagsColor;
+                m_flagsBlock.FontWeight = FontWeights.Bold;
+                m_flagsBlock.HorizontalAlignment = HorizontalAlignment.Right;
+                m_flagsBlock.VerticalAlignment = VerticalAlignment.Top;
+                m_flagsBlock.EndInit();
+                Children.Add(m_flagsBlock);
 			}
 		}
 	}
@@ -411,8 +421,8 @@ namespace SlideDiscWPF
         static double s_sfX = 1.0;
         static double s_sfY = 1.0;
 
-		BitmapSource fBitmap;
-		Exception fLoadError;
+		BitmapSource m_bitmap;
+		Exception m_loadError;
 
 		public BitmapPanel(Uri bitmapUri)
 			: base(bitmapUri)
@@ -451,7 +461,7 @@ namespace SlideDiscWPF
                 // BitmapImage frees the resources on EndInit if the decode size has been set.
                 BitmapImage image = new BitmapImage();
                 image.BeginInit();
-                image.UriSource = fUri;
+                image.UriSource = m_uri;
                 image.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
                 image.CacheOption = BitmapCacheOption.OnLoad;
                 image.UriCachePolicy = sCachePolicy;
@@ -468,14 +478,14 @@ namespace SlideDiscWPF
 
                 image.EndInit();
                 image.Freeze();
-                fBitmap = image;
+                m_bitmap = image;
 			}
 			catch (Exception err)
 			{
 				Debug.WriteLine(err.ToString());
-				fLoadError = err;
-				fDateTaken = DateTime.MinValue;
-				fBitmap = null;
+				m_loadError = err;
+				m_dateTaken = DateTime.MinValue;
+				m_bitmap = null;
 			}
 
 			Dispatcher.BeginInvoke(DispatcherPriority.Input, new EmptyDelegate(OnLoadComplete));
@@ -485,19 +495,19 @@ namespace SlideDiscWPF
 		{
 			try
 			{
-				if (fBitmap != null)
+				if (m_bitmap != null)
 				{
 					Image image = new Image();
 					image.BeginInit();
-					image.Source = fBitmap;
+					image.Source = m_bitmap;
 					image.Stretch = Stretch.Uniform;
 					image.EndInit();
 					Children.Add(image);
 				}
 				else
 				{
-					string message = (fLoadError != null)
-						? string.Concat("Failed to load image:\r\n", fLoadError.Message)
+					string message = (m_loadError != null)
+						? string.Concat("Failed to load image:\r\n", m_loadError.Message)
 						: "Failed to load image.";
 					TextBlock label = new TextBlock();
 					label.BeginInit();
@@ -526,110 +536,11 @@ namespace SlideDiscWPF
 			}
 		}
 
-        public override void SaveTags()
-        {
-            // Save the tags on the background thread (depending on image size and I/O performance it can take a bit)
-			sDecoderDispatcher.BeginInvoke(DispatcherPriority.Normal, new EmptyDelegate(BackgroundSaveTags));
-        }
-
-        // Size of metadata padding to add
-        const uint cMetadataPadding = 1024;
-
-        private void BackgroundSaveTags()
-        {
-            /*
-            try
-            {
-                if (!fUri.IsFile) throw new ApplicationException("Attempt to save tags to bitmap identified by a non-file URL");
-                Debug.WriteLine("Saving metadata to {0}", fUri.LocalPath, 0);
-                using (FileStream bitmapStream = new FileStream(fUri.LocalPath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
-                {
-                    BitmapDecoder decoder = BitmapDecoder.Create(bitmapStream, BitmapCreateOptions.PreservePixelFormat | BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.OnDemand);
-                    if (!decoder.CodecInfo.FileExtensions.Contains("jpg")) throw new ApplicationException("Saving metadata: Not a JPEG file.");
-                    if (decoder.Frames.Count > 0 && decoder.Frames[0].Metadata != null)
-                    {
-                        // Attempt to save in-place, if that fails then make space
-                        fBitmap = decoder.Frames[0];
-                        InPlaceBitmapMetadataWriter metadataWriter = fBitmap.CreateInPlaceBitmapMetadataWriter();
-                        string[] tags = new List<string>(Tags).ToArray(); // Not terribly efficient but it does the job.
-                        metadataWriter.SetQuery("System.Keywords", tags);
-                        if (metadataWriter.TrySave())
-                        {
-                            Debug.WriteLine("In-place metadata update succeeded.");
-                            return;
-                        }
-                    }
-                }
-
-                // In-place write failed. We'll have to do it the hard way
-                string outputFilename = string.Concat(
-                    Path.Combine(Path.GetDirectoryName(fUri.LocalPath), Path.GetFileNameWithoutExtension(fUri.LocalPath)),
-                    " (Tagged ZZYZX)", Path.GetExtension(fUri.LocalPath));
-                using (FileStream bitmapStream = new FileStream(fUri.LocalPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-                {
-                    BitmapDecoder input = BitmapDecoder.Create(bitmapStream, BitmapCreateOptions.PreservePixelFormat | BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.None);
-                    JpegBitmapEncoder output = new JpegBitmapEncoder();
-
-                    // Clone any existing metadata. Else, create anew
-                    BitmapMetadata metadata = null;
-                    if (input.Frames[0].Metadata != null)
-                    {
-                        metadata = input.Frames[0].Metadata.Clone() as BitmapMetadata;
-                    }
-                    else
-                    {
-                        metadata = new BitmapMetadata("jpg");
-                    }
-
-                    // Add padding of three types (seems that all are required)
-                    metadata.SetQuery("/app1/ifd/PaddingSchema:Padding", cMetadataPadding);
-                    metadata.SetQuery("/app1/ifd/exif/PaddingSchema:Padding", cMetadataPadding);
-                    metadata.SetQuery("/xmp/PaddingSchema:Padding", cMetadataPadding);
-
-                    // Set the tags
-                    string[] tags = new List<string>(Tags).ToArray(); // Not terribly efficient but it does the job.
-                    metadata.SetQuery("System.Keywords", tags);
-
-                    // Create the new JPEG
-                    output.Frames.Add(BitmapFrame.Create(input.Frames[0], input.Frames[0].Thumbnail, metadata, input.Frames[0].ColorContexts));
-
-                    // Write the new JPEG to a temporary file
-                    using (FileStream outputStream = new FileStream(outputFilename, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
-                    {
-                        output.Save(outputStream);
-                    }
-                } // Close input stream
-
-                // Verify that file sizes are different, delete the old and rename the new.
-                {
-                    // Strange that the File class doesn't have a GetLength method
-                    FileInfo inputInfo = new FileInfo(fUri.LocalPath);
-                    FileInfo outputInfo = new FileInfo(outputFilename);
-                    if (outputInfo.Length - inputInfo.Length < 3 * cMetadataPadding)
-                    {
-                        outputInfo.Delete();    // Delete the changed file
-                        throw new ApplicationException("Padded file isn't long enough.");
-                    }
-
-                    inputInfo.Delete(); // Delete the original
-                    File.Move(outputFilename, fUri.LocalPath);                       
-                }
-
-                Debug.WriteLine("Padded metadata and added tags.");
-
-            }
-            catch (Exception err)
-            {
-                Debug.WriteLine(err.ToString());
-            }
-            */
-        }
-
 	} // BitmapPanel
 
 	class VideoPanel : SlidePanel
 	{
-		MediaElement fMedia;
+		MediaElement m_media;
 
 		public VideoPanel(Uri videoUri)
 			: base(videoUri)
@@ -639,30 +550,30 @@ namespace SlideDiscWPF
 
         protected override void LoadContent()
         {
-			fMedia = new MediaElement();
-			fMedia.BeginInit();
-			fMedia.LoadedBehavior = MediaState.Manual;
-			fMedia.Source = fUri;
-			fMedia.Stretch = Stretch.Uniform;
-			fMedia.IsMuted = true;
-			fMedia.Pause();
-            fMedia.MediaOpened += new RoutedEventHandler(fMedia_MediaOpened);
-            fMedia.MediaFailed += new EventHandler<ExceptionRoutedEventArgs>(fMedia_MediaFailed);
-			fMedia.BufferingEnded += new RoutedEventHandler(fMedia_BufferingEnded);
-			fMedia.MediaEnded +=new RoutedEventHandler(fMedia_MediaEnded);
-			fMedia.EndInit();
+			m_media = new MediaElement();
+			m_media.BeginInit();
+			m_media.LoadedBehavior = MediaState.Manual;
+			m_media.Source = m_uri;
+			m_media.Stretch = Stretch.Uniform;
+			m_media.IsMuted = true;
+			m_media.Pause();
+            m_media.MediaOpened += new RoutedEventHandler(Media_MediaOpened);
+            m_media.MediaFailed += new EventHandler<ExceptionRoutedEventArgs>(Media_MediaFailed);
+			m_media.BufferingEnded += new RoutedEventHandler(Media_BufferingEnded);
+			m_media.MediaEnded +=new RoutedEventHandler(Media_MediaEnded);
+			m_media.EndInit();
 
-			Children.Add(fMedia);
+			Children.Add(m_media);
 			AddMetadata();
 		}
 
-        void fMedia_MediaFailed(object sender, ExceptionRoutedEventArgs e)
+        void Media_MediaFailed(object sender, ExceptionRoutedEventArgs e)
         {
             // Could add error report here.
             SetPanelState(PanelState.Completed);
         }
 
-        void fMedia_MediaOpened(object sender, RoutedEventArgs e)
+        void Media_MediaOpened(object sender, RoutedEventArgs e)
         {
             if (PanelState == PanelState.Init)
             {
@@ -670,7 +581,7 @@ namespace SlideDiscWPF
             }
         }
 
-		void fMedia_BufferingEnded(object sender, RoutedEventArgs e)
+		void Media_BufferingEnded(object sender, RoutedEventArgs e)
 		{
 			if (PanelState == PanelState.Init)
 			{
@@ -678,7 +589,7 @@ namespace SlideDiscWPF
 			}
 		}
 
-		void fMedia_MediaEnded(object sender, RoutedEventArgs e)
+		void Media_MediaEnded(object sender, RoutedEventArgs e)
 		{
 			SetPanelState(PanelState.Completed);
 		}
@@ -692,36 +603,36 @@ namespace SlideDiscWPF
         {
             get
             {
-                return (fMedia.IsLoaded) ? fMedia.NaturalDuration : base.Duration;
+                return (m_media.IsLoaded) ? m_media.NaturalDuration : base.Duration;
             }
         }
 
 		public override void Play()
 		{
-			fMedia.Play();
-			SetPanelState(fMedia.HasVideo ? PanelState.Playing : PanelState.Still);
+			m_media.Play();
+			SetPanelState(m_media.HasVideo ? PanelState.Playing : PanelState.Still);
 		}
 
 		public override void Stop()
 		{
-			fMedia.Stop();
-            base.Stop();
-		}
+			m_media.Stop();
+            SetPanelState(PanelState.Ready);
+        }
 
-		public override void Pause()
+        public override void Pause()
 		{
-			if (fMedia.CanPause)
+			if (m_media.CanPause)
 			{
-				fMedia.Pause();
+				m_media.Pause();
 			}
 			SetPanelState(PanelState.Paused);
 		}
 
 		public override void UnPause()
 		{
-			if (fMedia.CanPause)
+			if (m_media.CanPause)
 			{
-				fMedia.Play();
+				m_media.Play();
 
 			}
 			SetPanelState(PanelState.Playing);
@@ -729,8 +640,8 @@ namespace SlideDiscWPF
 
 		public override bool IsMuted
 		{
-			get { return fMedia.IsMuted; }
-			set { fMedia.IsMuted = value; }
+			get { return m_media.IsMuted; }
+			set { m_media.IsMuted = value; }
 		}
 	}
 			

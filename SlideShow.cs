@@ -484,6 +484,7 @@ namespace SlideDiscWPF
 		{
             Children.Remove(fFormerPanel);
             fFormerPanel.BeginAnimation(Panel.OpacityProperty, null);	// Remove animation (not required but this assists the garbage collector)
+            fFormerPanel.Done();    // Notify former panel that it is no longer in use.
 
 			// Memory leak checking
 			/*
