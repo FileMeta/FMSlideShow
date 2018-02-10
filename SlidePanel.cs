@@ -370,8 +370,9 @@ namespace SlideDiscWPF
 				txtblk.Text = builder.ToString();
 				txtblk.FontSize = cMetadataFontSize;
 				txtblk.Foreground = cMetadataColor;
-                txtblk.HorizontalAlignment = System.Windows.HorizontalAlignment.Right;
-                txtblk.VerticalAlignment = System.Windows.VerticalAlignment.Bottom;
+                txtblk.HorizontalAlignment = HorizontalAlignment.Right;
+                txtblk.VerticalAlignment = VerticalAlignment.Bottom;
+                txtblk.TextAlignment = TextAlignment.Right;
 				txtblk.EndInit();
 				Children.Add(txtblk);
 			}
