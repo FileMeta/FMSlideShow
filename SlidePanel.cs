@@ -124,7 +124,9 @@ namespace SlideDiscWPF
         #region Member Variables and Constructor
 
         protected Uri m_uri;
+        protected bool m_showMetadata = true;
         private PanelState m_panelState = PanelState.Init;
+        private TextBlock m_metadataBlock;
         private TextBlock m_flagsBlock;
         protected DateTime m_dateTaken = DateTime.MinValue;
         private string m_title;
@@ -249,6 +251,19 @@ namespace SlideDiscWPF
 			set { }
 		}
 
+        public bool ShowMetadata
+        {
+            get { return m_showMetadata; }
+            set
+            {
+                if (m_showMetadata != value)
+                {
+                    m_showMetadata = value;
+                    UpdateMetadata();
+                }
+            }
+        }
+
         protected string Title
         {
             get { return m_title; }
@@ -330,9 +345,18 @@ namespace SlideDiscWPF
             get { return m_uri; }
         }
 
-		protected void AddMetadata()
+		protected void UpdateMetadata()
 		{
-			StringBuilder builder = new StringBuilder();
+            // Remove any existing metadata block
+            if (m_metadataBlock != null)
+            {
+                Children.Remove(m_metadataBlock);
+                m_metadataBlock = null;
+            }
+
+            if (!m_showMetadata) return; // No metadata to be shown
+
+            StringBuilder builder = new StringBuilder();
 
 			if (m_uri != null)
 			{
@@ -365,16 +389,16 @@ namespace SlideDiscWPF
 
 			if (builder.Length > 0)
 			{
-                TextBlock txtblk = new TextBlock();
-				txtblk.BeginInit();
-				txtblk.Text = builder.ToString();
-				txtblk.FontSize = cMetadataFontSize;
-				txtblk.Foreground = cMetadataColor;
-                txtblk.HorizontalAlignment = HorizontalAlignment.Right;
-                txtblk.VerticalAlignment = VerticalAlignment.Bottom;
-                txtblk.TextAlignment = TextAlignment.Right;
-				txtblk.EndInit();
-				Children.Add(txtblk);
+                m_metadataBlock = new TextBlock();
+                m_metadataBlock.BeginInit();
+                m_metadataBlock.Text = builder.ToString();
+                m_metadataBlock.FontSize = cMetadataFontSize;
+                m_metadataBlock.Foreground = cMetadataColor;
+                m_metadataBlock.HorizontalAlignment = HorizontalAlignment.Right;
+                m_metadataBlock.VerticalAlignment = VerticalAlignment.Bottom;
+                m_metadataBlock.TextAlignment = TextAlignment.Right;
+                m_metadataBlock.EndInit();
+				Children.Add(m_metadataBlock);
 			}
 
             UpdateTagDisplay();
@@ -387,6 +411,8 @@ namespace SlideDiscWPF
                 Children.Remove(m_flagsBlock);
                 m_flagsBlock = null;
             }
+
+            if (!m_showMetadata) return; // No metadata to be shown
 
             string flagsText = m_title ?? string.Empty;
             if (m_tags != null && m_tags.Count > 0)
@@ -552,7 +578,7 @@ namespace SlideDiscWPF
 					Children.Add(label);
 				}
 
-				AddMetadata();
+				UpdateMetadata();
 
 				// Don't change the state if already displayed.
 				if (PanelState == PanelState.Init)
@@ -580,7 +606,7 @@ namespace SlideDiscWPF
 
         protected override void LoadContent()
         {
-			m_media = new MediaElement();
+            m_media = new MediaElement();
 			m_media.BeginInit();
 			m_media.LoadedBehavior = MediaState.Manual;
 			m_media.Source = m_uri;
@@ -594,7 +620,7 @@ namespace SlideDiscWPF
 			m_media.EndInit();
 
 			Children.Add(m_media);
-			AddMetadata();
+			UpdateMetadata();
 		}
 
         void Media_MediaFailed(object sender, ExceptionRoutedEventArgs e)

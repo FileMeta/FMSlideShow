@@ -159,6 +159,10 @@ namespace SlideDiscWPF
                     fSlideShow.ToggleTag(sNeedsWork);
                     break;
 
+                case Key.D:
+                    fSlideShow.ToggleShowMetadata();
+                    break;
+
 				case Key.Escape:
 					Close();
 					break;

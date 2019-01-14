@@ -154,6 +154,29 @@ namespace SlideDiscWPF
             return fTruncateVideo;
         }
 
+        bool fShowMetadata = true;
+        public bool ShowMetadata
+        {
+            get { return fShowMetadata; }
+            set
+            {
+                if (fShowMetadata != value)
+                {
+                    fShowMetadata = value;
+                    fFormerPanel.ShowMetadata = value;
+                    fActivePanel.ShowMetadata = value;
+                    fNextPanel.ShowMetadata = value;
+                }
+            }
+        }
+
+        public bool ToggleShowMetadata()
+        {
+            ShowMetadata = !fShowMetadata;
+            Message(fShowMetadata ? "Metadata On" : "Metadata Off");
+            return fShowMetadata;
+        }
+
         public void ToggleTag(string tag)
         {
             if (fActivePanel != null)
@@ -297,6 +320,8 @@ namespace SlideDiscWPF
 		private const string cRegValueBookmark = "Bookmark";
 		private const string cRegValuePathPrefix = "Path";
 		private const string cRegValueFadeTime = "FadeTime";
+        private const string cRegValueAdvanceTime = "AdvanceTime";
+        private const string cRegValueShowMetadata = "ShowMetadata";
 
 		RegistryKey fRegistryRootKey = Registry.CurrentUser;
 		public bool RegistryUseLocalMachine
@@ -347,23 +372,6 @@ namespace SlideDiscWPF
 			RegistryKey key = fRegistryRootKey.OpenSubKey(fRegistryPath);
 			if (key != null)
 			{
-				object fadeTime = key.GetValue(cRegValueFadeTime, null);
-				if (fadeTime != null)
-				{
-					if (fadeTime is string)
-					{
-						int fadeTimeMs = 0;
-						if (int.TryParse((string)fadeTime, out fadeTimeMs))
-						{
-							FadeTime = fadeTimeMs;
-						}
-					}
-					else if (fadeTime is Int32)
-					{
-						FadeTime = (int)fadeTime;
-					}
-				}
-
 				fRootPath = key.GetValue(cRegValueRootPath, null) as string;
 				List<string> paths = new List<string>();
 				for (int i = 0; i < 10000; ++i)
@@ -390,6 +398,10 @@ namespace SlideDiscWPF
 						fEnumerator.MovePrev();
 					}
 				}
+
+                FadeTime = IntFromRegistry(key, cRegValueFadeTime, FadeTime);
+                AdvanceTime = IntFromRegistry(key, cRegValueAdvanceTime, AdvanceTime);
+                fShowMetadata = 0 != IntFromRegistry(key, cRegValueShowMetadata, fShowMetadata ? 1 : 0);
 			}
 
 			if (string.IsNullOrEmpty(fRootPath))
@@ -531,8 +543,9 @@ namespace SlideDiscWPF
 			else
 			{
 				fNextPanel = SlidePanel.Load(new Uri(filename));
-			}
-			fNextPanel.Opacity = 0.0;
+                fNextPanel.ShowMetadata = fShowMetadata;
+            }
+            fNextPanel.Opacity = 0.0;
 			Children.Add(fNextPanel);
 		}
 
@@ -588,8 +601,9 @@ namespace SlideDiscWPF
 			else
 			{
 				fFormerPanel = SlidePanel.Load(new Uri(fEnumerator.Current));
-			}
-			Debug.Assert(fFormerPanel.Opacity == 1.0);
+                fFormerPanel.ShowMetadata = fShowMetadata;
+            }
+            Debug.Assert(fFormerPanel.Opacity == 1.0);
 			Children.Insert(0, fFormerPanel);
 		}
 
@@ -677,8 +691,30 @@ namespace SlideDiscWPF
 			fInTick = false;
 		}
 
-		#endregion // Private opreations
+        static private int IntFromRegistry(RegistryKey key, string name, int defaultValue)
+        {
+            object objValue = key.GetValue(name, null);
+            if (objValue != null)
+            {
+                if (objValue is string)
+                {
+                    int value = 0;
+                    if (int.TryParse((string)objValue, out value))
+                    {
+                        return value;
+                    }
+                }
+                else if (objValue is Int32)
+                {
+                    return (int)objValue;
+                }
+            }
 
-	}
+            return defaultValue;
+        }
+
+        #endregion // Private operations
+
+    }
 
 }
