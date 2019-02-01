@@ -94,6 +94,9 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="CodeBits\DateTag.cs" />
+    <Compile Include="CodeBits\MetaTag.cs" />
+    <Compile Include="CodeBits\TimeZoneTag.cs" />
     <Compile Include="WinShellPropertyStore.cs" />
   </ItemGroup>
   <ItemGroup>

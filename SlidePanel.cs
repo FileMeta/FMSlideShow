@@ -5,13 +5,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Media.Animation;
 using System.Diagnostics;
 using System.Threading;
 using System.Windows.Threading;
 using System.Globalization;
-using System.IO;
-
+using FileMeta;
 namespace SlideDiscWPF
 {
 	internal delegate void EmptyDelegate();
@@ -54,11 +52,15 @@ namespace SlideDiscWPF
 
         #region Static Elements
 
+        const string c_usCultureName = "en-US";
+        const string c_usOverrideDateFormat = "ddd, d MMM yyyy, h:mm tt";
+
         // Property keys retrieved from https://msdn.microsoft.com/en-us/library/windows/desktop/dd561977(v=vs.85).aspx
         static WinShell.PROPERTYKEY s_pkTitle = new WinShell.PROPERTYKEY("F29F85E0-4FF9-1068-AB91-08002B27B3D9", 2); // System.Title
         static WinShell.PROPERTYKEY s_pkKeywords = new WinShell.PROPERTYKEY("F29F85E0-4FF9-1068-AB91-08002B27B3D9", 5); // System.Keywords
         static WinShell.PROPERTYKEY s_pkDateTaken = new WinShell.PROPERTYKEY("14B81DA1-0135-4D31-96D9-6CBFC9671A99", 36867); // System.Photo.DateTaken (used on .jpg)
         static WinShell.PROPERTYKEY s_pkDateEncoded = new WinShell.PROPERTYKEY("2E4B640D-5019-46D8-8881-55414CC5CAA0", 100); // System.Media.DateEncoded (used on .mp4)
+        static WinShell.PROPERTYKEY s_pkComment = new WinShell.PROPERTYKEY("F29F85E0-4FF9-1068-AB91-08002B27B3D9", 6);
 
         protected const double cMetadataFontSize = 20;
         protected static readonly Brush cMetadataColor = Brushes.Chartreuse;
@@ -128,7 +130,7 @@ namespace SlideDiscWPF
         private PanelState m_panelState = PanelState.Init;
         private TextBlock m_metadataBlock;
         private TextBlock m_flagsBlock;
-        protected DateTime m_dateTaken = DateTime.MinValue;
+        protected string m_dateTaken = null;
         private string m_title;
         private List<string> m_tags;
         private bool m_tagsChanged = false;
@@ -152,17 +154,43 @@ namespace SlideDiscWPF
             {
                 using (var ps = WinShell.PropertyStore.Open(m_uri.LocalPath, false))
                 {
+                    // See if timezone and precision info are included
+                    int precision = 0;
+                    TimeZoneTag tz = null;
+                    foreach(var pair in MetaTag.Extract(ps.GetValue(s_pkComment) as string))
+                    {
+                        if (pair.Key.Equals("datePrecision", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (!int.TryParse(pair.Value, out precision))
+                                precision = 0;
+                        }
+
+                        if (pair.Key.Equals("timezone", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (!TimeZoneTag.TryParse(pair.Value, out tz))
+                                tz = null;
+                        }
+                    }
 
                     // Get the date the photo or video was taken.
                     {
-                        object dt = ps.GetValue(s_pkDateTaken);
-                        if (dt == null)
+                        object date = ps.GetValue(s_pkDateTaken);
+                        if (date == null)
                         {
-                            dt = ps.GetValue(s_pkDateEncoded);
+                            date = ps.GetValue(s_pkDateEncoded);
                         }
-                        if (dt != null && dt is DateTime)
+                        if (date != null && date is DateTime)
                         {
-                            m_dateTaken = ((DateTime)dt).ToLocalTime();
+                            var dt = new DateTag((DateTime)date, tz, precision);
+                            dt = dt.ResolveTimeZone(TimeZoneInfo.Local);
+                            var ci = CultureInfo.CurrentCulture;
+
+                            // Use my preferred format if US English
+                            string format = ci.Name.Equals(c_usCultureName, StringComparison.Ordinal)
+                                ? c_usOverrideDateFormat
+                                : ci.DateTimeFormat.FullDateTimePattern;
+
+                            m_dateTaken = dt.ToString(format, ci);
                         }
                     }
 
@@ -381,10 +409,10 @@ namespace SlideDiscWPF
 				}
 			}
 
-			if (m_dateTaken != DateTime.MinValue)
+			if (m_dateTaken != null)
 			{
 				builder.Append("\r\n");
-				builder.Append(m_dateTaken.ToString("ddd, d MMM yyyy, h:mm tt"));
+				builder.Append(m_dateTaken);
 			}
 
 			if (builder.Length > 0)
@@ -540,7 +568,7 @@ namespace SlideDiscWPF
 			{
 				Debug.WriteLine(err.ToString());
 				m_loadError = err;
-				m_dateTaken = DateTime.MinValue;
+				m_dateTaken = null;
 				m_bitmap = null;
 			}
 
