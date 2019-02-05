@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -13,7 +13,21 @@ namespace SlideDiscWPF
 {
 	class SlideShow : Grid
 	{
-		const string cAtBeginning = "Beginning of collection.";
+        /// <summary>
+        /// Slideshow Settings
+        /// </summary>
+        public class Settings
+        {
+            List<string> m_paths = new List<string>();
+
+            public string RootPath { get; set; }
+            public IList<string> Paths { get { return m_paths; } }
+            public int? AdvanceTime { get; set; } // In milliseconds
+            public int? FadeTime { get; set; } // In milliseconds
+            public bool? ShowMetadata { get; set; }
+        }
+
+        const string cAtBeginning = "Beginning of collection.";
 		const string cNoImagesFound = "No Photos or Videos found!";
 		static string[] sIncludeExtensions = new string[] { ".jpg", ".jpeg", ".avi", ".wmv", ".mpg", ".mpeg", ".mp4", ".mov" };
 
@@ -315,138 +329,59 @@ namespace SlideDiscWPF
 			Start(2);
 		}
 
-		private const string cDefaultRegistryPath = "Software\\BCR\\SlideDisc";
-		private const string cRegValueRootPath = "RootPath";
-		private const string cRegValueBookmark = "Bookmark";
-		private const string cRegValuePathPrefix = "Path";
-		private const string cRegValueFadeTime = "FadeTime";
-        private const string cRegValueAdvanceTime = "AdvanceTime";
-        private const string cRegValueShowMetadata = "ShowMetadata";
+        public string CurrentSlidePath
+        {
+            get
+            {
+                return fActivePanel.Uri?.OriginalString ?? string.Empty;
+            }
 
-		RegistryKey fRegistryRootKey = Registry.CurrentUser;
-		public bool RegistryUseLocalMachine
-		{
-			get { return fRegistryRootKey == Registry.LocalMachine; }
-			set { fRegistryRootKey = value ? Registry.LocalMachine : Registry.CurrentUser; }
-		}
+            set
+            {
+                if (!string.IsNullOrEmpty(value))
+                {
+                    fEnumerator.SetCurrent(value);
+                    fEnumerator.MovePrev();
+                }
 
-		string fRegistryPath = cDefaultRegistryPath;
-		public string RegistryPath
-		{
-			get { return fRegistryPath; }
-			set { fRegistryPath = value; }
-		}
+            }
+        }
 
-		bool fPreserveStateInRegistry = true;
-		public bool PreserveStateInRegistry
-		{
-			get { return fPreserveStateInRegistry; }
-			set{ fPreserveStateInRegistry = value; }
-		}
+        public Settings GetSettings()
+        {
+            Settings value = new Settings();
+            value.RootPath = fRootPath;
+            foreach(var path in fEnumerator.RootDirectories)
+            {
+                value.Paths.Add(path);
+            }
 
-		public string CurrentPath
-		{
-			get
+            // For now, we don't persist FadeTime, AdvanceTime, or ShowMetadata
+
+            return value;
+        }
+
+        public void LoadSettings(Settings value)
+        {
+            fRootPath = value.RootPath;
+            if (string.IsNullOrEmpty(fRootPath))
+            {
+                fRootPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+            }
+
+			if (value.Paths.Count > 0)
 			{
-				Uri uri = fActivePanel.Uri;
-				return (uri != null) ? uri.OriginalString : string.Empty;
-			}
-			set
-			{
-				fEnumerator.SetCurrent(value);
-			}
-		}
-
-		public bool SetCurrentPath(string path)
-		{
-			if (fEnumerator.SetCurrent(path))
-			{
-				fEnumerator.MovePrev();
-				return true;
-			}
-			return false;
-		}
-
-		public void LoadStateFromRegistry()
-		{
-			RegistryKey key = fRegistryRootKey.OpenSubKey(fRegistryPath);
-			if (key != null)
-			{
-				fRootPath = key.GetValue(cRegValueRootPath, null) as string;
-				List<string> paths = new List<string>();
-				for (int i = 0; i < 10000; ++i)
-				{
-					string path = key.GetValue(string.Format("{0}{1:d4}", cRegValuePathPrefix, i), null) as String;
-					if (string.IsNullOrEmpty(path)) break;
-					paths.Add(path);
-				}
-				if (paths.Count > 0)
-				{
-					fEnumerator.RootDirectories = paths.ToArray();
-				}
-				else
-				{
-					fEnumerator.RootDirectories = new string[] { fRootPath };
-				}
-				string bookmark = key.GetValue(cRegValueBookmark, null) as string;
-				if (bookmark != null)
-				{
-					Debug.WriteLine("SetCurrent: " + bookmark);
-					if (fEnumerator.SetCurrent(bookmark))
-					{
-						Debug.WriteLine("CurrentIs: " + fEnumerator.Current);
-						fEnumerator.MovePrev();
-					}
-				}
-
-                FadeTime = IntFromRegistry(key, cRegValueFadeTime, FadeTime);
-                AdvanceTime = IntFromRegistry(key, cRegValueAdvanceTime, AdvanceTime);
-                fShowMetadata = 0 != IntFromRegistry(key, cRegValueShowMetadata, fShowMetadata ? 1 : 0);
-			}
-
-			if (string.IsNullOrEmpty(fRootPath))
-			{
-				fRootPath = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-			}
-		}
-
-		public void SaveSelectionsToRegistry()
-		{
-			RegistryKey key = fRegistryRootKey.CreateSubKey(fRegistryPath, RegistryKeyPermissionCheck.ReadWriteSubTree);
-			key.SetValue(cRegValueRootPath, fRootPath);
-			string[] paths = fEnumerator.RootDirectories;
-			int i;
-			for (i = 0; i < paths.Length; ++i)
-			{
-				key.SetValue(string.Format("{0}{1:d4}", cRegValuePathPrefix, i), paths[i]);
-			}
-			// Erase all other names
-			for (; true; ++i)
-			{
-				string name = string.Format("{0}{1:d4}", cRegValuePathPrefix, i);
-				if (null == key.GetValue(name))
-				{
-					break;
-				}
-				key.DeleteValue(name, false);
-			}
-		}
-
-		public void SaveCurrentSlideToRegistry()
-		{
-			RegistryKey key = fRegistryRootKey.OpenSubKey(fRegistryPath, true);
-			Uri uri = fActivePanel.Uri;
-			string path = (uri != null) ? uri.OriginalString : null;
-			if (!string.IsNullOrEmpty(path))
-			{
-				key.SetValue(cRegValueBookmark, path);
-				Debug.WriteLine("SaveCurrent" + path);
+				fEnumerator.RootDirectories = value.Paths.ToArray();
 			}
 			else
 			{
-				key.SetValue(cRegValueBookmark, string.Empty);
-				Debug.WriteLine("ClearCurrent" + path);
+				fEnumerator.RootDirectories = new string[] { fRootPath };
 			}
+
+            if (value.FadeTime.HasValue) FadeTime = value.FadeTime.Value;
+            if (value.AdvanceTime.HasValue) AdvanceTime = value.AdvanceTime.Value;
+            if (value.ShowMetadata.HasValue) ShowMetadata = value.ShowMetadata.Value;
+
 		}
 
         public void Message(string msg)
@@ -505,8 +440,8 @@ namespace SlideDiscWPF
 			GC.Collect(5, GCCollectionMode.Forced);
 			*/
 
-			// Rotate the panels down
-			fFormerPanel = fActivePanel;
+        // Rotate the panels down
+        fFormerPanel = fActivePanel;
 			fActivePanel = fNextPanel;
 			fNextPanel = null;
 
@@ -691,30 +626,10 @@ namespace SlideDiscWPF
 			fInTick = false;
 		}
 
-        static private int IntFromRegistry(RegistryKey key, string name, int defaultValue)
-        {
-            object objValue = key.GetValue(name, null);
-            if (objValue != null)
-            {
-                if (objValue is string)
-                {
-                    int value = 0;
-                    if (int.TryParse((string)objValue, out value))
-                    {
-                        return value;
-                    }
-                }
-                else if (objValue is Int32)
-                {
-                    return (int)objValue;
-                }
-            }
-
-            return defaultValue;
-        }
-
-        #endregion // Private operations
+#endregion // Private operations
 
     }
+
+
 
 }

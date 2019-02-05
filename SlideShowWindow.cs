@@ -47,30 +47,25 @@ namespace SlideDiscWPF
 			set { fSlideShow.RootPath = value; }
 		}
 
-		public string RegistryPath
-		{
-			get { return fSlideShow.RegistryPath; }
-			set { fSlideShow.RegistryPath = value; }
-		}
-
-		public bool RegistryUseLocalMachine
-		{
-			get { return fSlideShow.RegistryUseLocalMachine; }
-			set { fSlideShow.RegistryUseLocalMachine = value; }
-		}
-
 		public string[] SelectedDirectories
 		{
 			get { return fSlideShow.SelectedDirectories; }
 			set { fSlideShow.SelectedDirectories = value; }
 		}
 
-		public void LoadStateFromRegistry()
+		public void LoadState()
 		{
-			fSlideShow.LoadStateFromRegistry();
+            fSlideShow.LoadSettings(Configuration.Load());
+            fSlideShow.CurrentSlidePath = Configuration.LoadBookmark();
 		}
 
-		public void Start()
+        public void SaveState()
+        {
+            Configuration.Save(fSlideShow.GetSettings());
+            Configuration.SaveBookmark(fSlideShow.CurrentSlidePath);
+        }
+
+        public void Start()
 		{
 			fSlideShow.Start(1);
 		}
@@ -199,8 +194,7 @@ namespace SlideDiscWPF
 
 		protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
 		{
-			fSlideShow.SaveSelectionsToRegistry();
-			fSlideShow.SaveCurrentSlideToRegistry();
+            SaveState();
 			base.OnClosing(e);
 		}
 

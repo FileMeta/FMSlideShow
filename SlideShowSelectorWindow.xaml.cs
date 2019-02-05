@@ -36,7 +36,7 @@ namespace SlideDiscWPF
                 fFolderView.RootDirectory = fSlideShow.RootPath;
                 fHeader.Text = fSlideShow.RootPath;
                 fFolderView.SetPathsChecked(fSlideShow.SelectedDirectories);
-                fBookmark = fSlideShow.CurrentPath;
+                fBookmark = fSlideShow.CurrentSlidePath;
             }
         }
 
@@ -92,10 +92,11 @@ namespace SlideDiscWPF
         {
             fSlideShow.Pause();
             fSlideShow.SelectedDirectories = fFolderView.GetCheckedPaths();
-            fSlideShow.SetCurrentPath(fBookmark);
+            fSlideShow.CurrentSlidePath = fBookmark;
             Close();
-            fSlideShow.SaveSelectionsToRegistry();
-            fSlideShow.SaveCurrentSlideToRegistry();
+
+            SlideShowWindow window = Parent as SlideShowWindow;
+            if (window != null) window.SaveState();
             fSlideShow.Start(1);
         }
     }
