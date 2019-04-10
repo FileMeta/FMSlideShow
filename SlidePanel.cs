@@ -56,11 +56,11 @@ namespace SlideDiscWPF
         const string c_usOverrideDateFormat = "ddd, d MMM yyyy, h:mm tt";
 
         // Property keys retrieved from https://msdn.microsoft.com/en-us/library/windows/desktop/dd561977(v=vs.85).aspx
-        static WinShell.PROPERTYKEY s_pkTitle = new WinShell.PROPERTYKEY("F29F85E0-4FF9-1068-AB91-08002B27B3D9", 2); // System.Title
-        static WinShell.PROPERTYKEY s_pkKeywords = new WinShell.PROPERTYKEY("F29F85E0-4FF9-1068-AB91-08002B27B3D9", 5); // System.Keywords
-        static WinShell.PROPERTYKEY s_pkDateTaken = new WinShell.PROPERTYKEY("14B81DA1-0135-4D31-96D9-6CBFC9671A99", 36867); // System.Photo.DateTaken (used on .jpg)
-        static WinShell.PROPERTYKEY s_pkDateEncoded = new WinShell.PROPERTYKEY("2E4B640D-5019-46D8-8881-55414CC5CAA0", 100); // System.Media.DateEncoded (used on .mp4)
-        static WinShell.PROPERTYKEY s_pkComment = new WinShell.PROPERTYKEY("F29F85E0-4FF9-1068-AB91-08002B27B3D9", 6);
+        static Interop.PropertyKey s_pkTitle = new Interop.PropertyKey("F29F85E0-4FF9-1068-AB91-08002B27B3D9", 2); // System.Title
+        static Interop.PropertyKey s_pkKeywords = new Interop.PropertyKey("F29F85E0-4FF9-1068-AB91-08002B27B3D9", 5); // System.Keywords
+        static Interop.PropertyKey s_pkDateTaken = new Interop.PropertyKey("14B81DA1-0135-4D31-96D9-6CBFC9671A99", 36867); // System.Photo.DateTaken (used on .jpg)
+        static Interop.PropertyKey s_pkDateEncoded = new Interop.PropertyKey("2E4B640D-5019-46D8-8881-55414CC5CAA0", 100); // System.Media.DateEncoded (used on .mp4)
+        static Interop.PropertyKey s_pkComment = new Interop.PropertyKey("F29F85E0-4FF9-1068-AB91-08002B27B3D9", 6);
 
         protected const double cMetadataFontSize = 20;
         protected static readonly Brush cMetadataColor = Brushes.Chartreuse;
