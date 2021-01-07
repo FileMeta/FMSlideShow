@@ -11,6 +11,7 @@ namespace SlideDiscWPF
     {
         private const string c_configDirectory = "FileMeta"; // Within the AppData folder
         private const string c_settingsFilename = "FMSlideShow_Settings.json";
+        private const string c_defaultSettingsFilename = "FMSlideShow_Settings_Default.json";
         private const string c_bookmarkFilename = "FMSlideShow_Bookmark.txt";
 
         // Configuration constants
@@ -44,7 +45,19 @@ namespace SlideDiscWPF
 
         public static SlideShow.Settings Load()
         {
-            string path = Path.Combine(s_configPath, c_settingsFilename);
+            string settingsPath = Path.Combine(s_configPath, c_settingsFilename);
+
+            // If the configuration file doesn't exist, copy in default (if it exists)
+            if (!File.Exists(settingsPath))
+            {
+                string defaultSettingsPath = Path.Combine(
+                    Path.GetDirectoryName(Environment.GetCommandLineArgs()[0]),
+                    c_defaultSettingsFilename);
+                if (File.Exists(defaultSettingsPath))
+                {
+                    File.Copy(defaultSettingsPath, settingsPath);
+                }
+            }
 
             // Create the result
             var list = new List<KeyValuePair<string, object>>();
@@ -54,7 +67,7 @@ namespace SlideDiscWPF
             try
             {
                 XElement doc = null;
-                using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (var stream = new FileStream(settingsPath, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     using (var jsonReader = System.Runtime.Serialization.Json.JsonReaderWriterFactory.CreateJsonReader(stream, Encoding.UTF8, new System.Xml.XmlDictionaryReaderQuotas(), null))
                     {
