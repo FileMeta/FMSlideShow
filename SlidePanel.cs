@@ -637,7 +637,17 @@ namespace SlideDiscWPF
             m_media = new MediaElement();
 			m_media.BeginInit();
 			m_media.LoadedBehavior = MediaState.Manual;
-			m_media.Source = m_uri;
+
+			// There's a bug in MediaElement that it doesn't handle encoded URIs properly.
+			// In this case, if the file has a # % or related character that should be encoded
+			// in a URI it doesn't work. The following remedies the problem. However, the constructor
+			// with the dontEscape parameter is deprecated so we suppress the warning. If a future
+			// framework ever eliminates this constructor altogher, I hope it also fixes the MediaElement
+			// bug.
+#pragma warning disable 618
+			m_media.Source = new Uri(m_uri.OriginalString, true);
+#pragma warning restore 618
+
 			m_media.Stretch = Stretch.Uniform;
 			m_media.IsMuted = true;
 			m_media.Pause();
